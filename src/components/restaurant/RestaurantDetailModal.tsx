@@ -8,6 +8,7 @@ import RestaurantNotificationSettings from './RestaurantNotificationSettings';
 import { getAvailability, toggleRestaurant } from '@/lib/actions/restaurants';
 import type {
   UserRestaurantWithRestaurant,
+  UserRestaurant,
   AvailabilitySnapshot,
 } from '@/lib/types/database';
 
@@ -68,8 +69,14 @@ export default function RestaurantDetailModal({
 }: RestaurantDetailModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>('calendar');
   const [isPending, startTransition] = useTransition();
+  const [localUserRestaurant, setLocalUserRestaurant] = useState(userRestaurant);
 
-  const { restaurant } = userRestaurant;
+  const { restaurant } = localUserRestaurant;
+
+  // Handler to update local state when settings change
+  const handleSettingsUpdate = (updates: Partial<UserRestaurant>) => {
+    setLocalUserRestaurant(prev => ({ ...prev, ...updates }));
+  };
   const { availability, loading: loadingAvailability } = useAvailability(
     restaurant.id,
     isOpen
@@ -77,22 +84,18 @@ export default function RestaurantDetailModal({
 
   // Generate booking URL based on platform
   const getBookingUrl = () => {
-    const { platform, platform_id, name } = restaurant;
+    const { platform, name } = restaurant;
     const encodedName = encodeURIComponent(name);
+    // Derive slug from name: lowercase, replace spaces with hyphens
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     switch (platform) {
       case 'resy':
-        return platform_id
-          ? `https://resy.com/cities/sf/${platform_id}`
-          : `https://resy.com/cities/sf?query=${encodedName}`;
+        return `https://resy.com/cities/san-francisco-ca/venues/${slug}?seats=${localUserRestaurant.party_size}`;
       case 'tock':
-        return platform_id
-          ? `https://www.exploretock.com/${platform_id}`
-          : `https://www.exploretock.com/search?query=${encodedName}`;
+        return `https://www.exploretock.com/${slug}`;
       case 'opentable':
-        return platform_id
-          ? `https://www.opentable.com/r/${platform_id}`
-          : `https://www.opentable.com/s?term=${encodedName}`;
+        return `https://www.opentable.com/s?term=${encodedName}`;
       default:
         return null;
     }
@@ -145,7 +148,7 @@ export default function RestaurantDetailModal({
                 </span>
               )}
               <span className="text-xs text-gray-500">
-                Party size: {userRestaurant.party_size}
+                Party size: {localUserRestaurant.party_size}
               </span>
             </div>
 
@@ -207,14 +210,17 @@ export default function RestaurantDetailModal({
               ) : (
                 <AvailabilityCalendar
                   availability={availability}
-                  partySize={userRestaurant.party_size}
+                  partySize={localUserRestaurant.party_size}
                 />
               )}
             </>
           )}
 
           {activeTab === 'settings' && (
-            <RestaurantNotificationSettings userRestaurant={userRestaurant} />
+            <RestaurantNotificationSettings
+              userRestaurant={localUserRestaurant}
+              onUpdate={handleSettingsUpdate}
+            />
           )}
         </div>
 
