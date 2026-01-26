@@ -87,7 +87,9 @@ export async function fetchResyAvailability(
       headers: {
         'Authorization': buildAuthHeader(apiKey),
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Origin': 'https://resy.com',
+        'Referer': 'https://resy.com/',
       },
     });
 
@@ -118,39 +120,49 @@ export async function fetchResyAvailability(
 }
 
 /**
- * Fetches availability for multiple dates in parallel
- * Useful for getting a full date range in one operation
+ * Delay helper for rate limiting
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetches availability for multiple dates sequentially with rate limiting
+ * to avoid overwhelming the Resy API
  *
  * @param venueId - The Resy venue ID
  * @param dates - Array of dates in YYYY-MM-DD format
  * @param partySize - Number of guests
+ * @param delayMs - Delay between requests in milliseconds (default: 200ms)
  * @returns Promise resolving to an array of API responses (one per date)
  */
 export async function fetchResyAvailabilityBatch(
   venueId: string,
   dates: string[],
-  partySize: number
+  partySize: number,
+  delayMs: number = 200
 ): Promise<ResyFindResponse[]> {
-  const results = await Promise.allSettled(
-    dates.map(day =>
-      fetchResyAvailability({
+  const responses: ResyFindResponse[] = [];
+
+  for (let i = 0; i < dates.length; i++) {
+    const day = dates[i];
+
+    try {
+      const response = await fetchResyAvailability({
         venue_id: venueId,
         day,
         party_size: partySize,
-      })
-    )
-  );
-
-  // Log errors but don't fail the whole batch
-  const responses: ResyFindResponse[] = [];
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === 'fulfilled') {
-      responses.push(result.value);
-    } else {
-      console.error(`Failed to fetch Resy availability for ${dates[i]}:`, result.reason);
+      });
+      responses.push(response);
+    } catch (error) {
+      console.error(`Failed to fetch Resy availability for ${day}:`, error);
       // Add an empty response for failed dates
       responses.push({ results: { venues: [] } });
+    }
+
+    // Rate limiting: wait between requests (except for last one)
+    if (i < dates.length - 1) {
+      await delay(delayMs);
     }
   }
 

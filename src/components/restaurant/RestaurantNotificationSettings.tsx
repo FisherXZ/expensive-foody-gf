@@ -9,7 +9,7 @@ import type { UserRestaurant } from '@/lib/types/database';
 
 interface RestaurantNotificationSettingsProps {
   userRestaurant: UserRestaurant;
-  onUpdate?: () => void;
+  onUpdate?: (updates: Partial<UserRestaurant>) => void;
 }
 
 /**
@@ -58,7 +58,14 @@ export default function RestaurantNotificationSettings({
 
       if (result.success) {
         setSuccess(true);
-        onUpdate?.();
+        onUpdate?.({
+          party_size: partySize,
+          notify_new_releases: notifyEnabled,
+          notify_date_start: startDate,
+          notify_date_end: endDate,
+          preferred_time_start: timeStart,
+          preferred_time_end: timeEnd,
+        });
         // Clear success message after 2 seconds
         setTimeout(() => setSuccess(false), 2000);
       } else {

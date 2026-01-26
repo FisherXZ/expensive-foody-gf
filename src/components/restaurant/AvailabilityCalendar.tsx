@@ -20,7 +20,7 @@ interface AvailabilityCalendarProps {
   partySize: number;
 }
 
-type AvailabilityStatus = 'available' | 'limited' | 'unavailable' | 'past';
+type AvailabilityStatus = 'available' | 'unavailable' | 'past';
 
 interface DayData {
   date: Date;
@@ -35,7 +35,6 @@ const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 const STATUS_COLORS: Record<AvailabilityStatus, string> = {
   available: 'bg-green-100 text-green-700 hover:bg-green-200',
-  limited: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
   unavailable: 'bg-gray-50 text-gray-400',
   past: 'bg-gray-50 text-gray-300',
 };
@@ -43,7 +42,7 @@ const STATUS_COLORS: Record<AvailabilityStatus, string> = {
 /**
  * Availability Calendar Component
  * 2-month grid view showing availability status
- * Color coding: green (available), yellow (limited), gray (unavailable/past)
+ * Color coding: green (available), gray (unavailable/past)
  */
 export default function AvailabilityCalendar({
   availability,
@@ -92,8 +91,6 @@ export default function AvailabilityCalendar({
             status = 'past';
           } else if (matchingSlots.length === 0) {
             status = 'unavailable';
-          } else if (matchingSlots.length <= 2) {
-            status = 'limited';
           } else {
             status = 'available';
           }
@@ -146,10 +143,6 @@ export default function AvailabilityCalendar({
         <div className="flex items-center space-x-1">
           <div className="w-3 h-3 rounded bg-green-100 border border-green-200" />
           <span className="text-gray-600">Available</span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <div className="w-3 h-3 rounded bg-yellow-100 border border-yellow-200" />
-          <span className="text-gray-600">Limited</span>
         </div>
         <div className="flex items-center space-x-1">
           <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200" />
@@ -208,8 +201,7 @@ export default function AvailabilityCalendar({
                   return <div key={`empty-${index}`} className="h-8" />;
                 }
 
-                const isClickable =
-                  dayData.status === 'available' || dayData.status === 'limited';
+                const isClickable = dayData.status === 'available';
                 const isSelected = selectedDay?.dateString === dayData.dateString;
 
                 return (
